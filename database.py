@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 
 # MongoDB connection
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://mongo:vAPrKETJKJBNONRTzrlBcsSTAQuNdTdD@mongodb.railway.internal:27017")
 DB_NAME = os.getenv("DB_NAME", "shopify_checker")
 
 client = AsyncIOMotorClient(MONGODB_URL)
