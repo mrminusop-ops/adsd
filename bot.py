@@ -1599,7 +1599,7 @@ async def process_mass_cards(event, cards, sites, proxies, send_approved=True):
                 await update_progress()
     
     try:
-        workers = [asyncio.create_task(worker()) for _ in range(10)]
+        workers = [asyncio.create_task(worker()) for _ in range(20)]  # Changed from 10 to 20
         
         while workers:
             if user_id not in ACTIVE_MTXT_PROCESSES:
@@ -1953,7 +1953,7 @@ async def process_mass_cards_with_sites(event, cards, sites, proxies, send_appro
                 await update_progress()
 
     try:
-        workers = [asyncio.create_task(worker()) for _ in range(10)]
+        workers = [asyncio.create_task(worker()) for _ in range(20)]  # Changed from 10 to 20
 
         while workers:
             if user_id not in ACTIVE_MTXT_PROCESSES:
