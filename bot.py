@@ -35,7 +35,7 @@ from database import (
 # ====================== CONFIGURATION ======================
 API_ID = int(os.getenv("API_ID", "36442788"))
 API_HASH = os.getenv("API_HASH", "a46cfef94ef9de4026597c6a4addf073")
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8732799132:AAGUYUUdVMD_d3SAzln0qTnKq0ods7Qv9H4")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8180020111:AAFnyWXzcet_bW3d03Oq-04bHWa5YDCgNY8")
 ADMIN_ID = json.loads(os.getenv("ADMIN_ID", "[6598607558]"))
 GROUP_ID = int(os.getenv("GROUP_ID", "-1003684602999"))
 
