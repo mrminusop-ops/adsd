@@ -7,13 +7,12 @@ import random, datetime, os, re, asyncio, time, string, aiofiles, aiohttp, json,
 
 from database import (
     init_db, ensure_user, get_user_plan, set_user_plan, is_banned_user,
-    ban_user, unban_user, create_key, use_key, get_all_keys, delete_key,
+    ban_user, unban_user, create_key, use_key, get_all_keys,
     add_proxy_db, get_random_proxy, get_all_user_proxies, get_proxy_count,
     remove_proxy_by_index, clear_all_proxies, add_site_db, get_user_sites,
     remove_site_db, save_card_to_db, get_total_users, get_premium_count,
     get_total_sites_count, get_total_cards_count, get_approved_count
 )
-
 warnings.filterwarnings('ignore')
 
 # ========== CONFIG ==========
