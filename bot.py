@@ -498,7 +498,7 @@ Country: {country} {flag}</pre>"""
 
 # ==================== MASS SHOPIFY CHECK WITH 3 RETRIES ====================
 
-async def process_mtxt_cards(event, cards, local_sites, send_approved=True):
+async def process_mtxt_cards(event, cards, local_sites, show_approved=True):
     """
     Mass check cards using user's sites with 3 retries on different sites
     """
@@ -546,8 +546,8 @@ async def process_mtxt_cards(event, cards, local_sites, send_approved=True):
                 asyncio.create_task(handle_hit(event, card, res, status, site_idx, username, is_private))
             elif status == "Approved":
                 approved += 1
-                await save_card_to_db(card, "APPROVED", res.get('Response'), res.get('Gateway'), res.get('Price'))
-                if send_approved:
+                # Show approved cards but DON'T save to database
+                if show_approved:
                     asyncio.create_task(handle_hit(event, card, res, status, site_idx, username, is_private))
             elif status in ("SiteError", "Error"):
                 errors += 1
@@ -580,7 +580,7 @@ async def process_mtxt_cards(event, cards, local_sites, send_approved=True):
 
 # ==================== RANDOM SITE MASS CHECK WITH 3 RETRIES ====================
 
-async def process_ran_cards(event, cards, global_sites, send_approved=True):
+async def process_ran_cards(event, cards, global_sites, show_approved=True):
     """
     Mass check cards using random global sites with 3 retries on different sites
     """
@@ -628,8 +628,8 @@ async def process_ran_cards(event, cards, global_sites, send_approved=True):
                 asyncio.create_task(handle_hit(event, card, res, status, site_info, username, is_private))
             elif status == "Approved":
                 approved += 1
-                await save_card_to_db(card, "APPROVED", res.get('Response'), res.get('Gateway'), res.get('Price'))
-                if send_approved:
+                # Show approved cards but DON'T save to database
+                if show_approved:
                     asyncio.create_task(handle_hit(event, card, res, status, site_info, username, is_private))
             elif status in ("SiteError", "Error"):
                 errors += 1
@@ -659,6 +659,7 @@ async def process_ran_cards(event, cards, global_sites, send_approved=True):
 {PE} Total ━ {total}"""
     await styled_edit(status_msg, final, emoji_ids=[CE["party"], CE["gem"], CE["check"], CE["cross"], CE["warn"]])
     ACTIVE_RAN_PROCESSES.pop(user_id, None)
+
 
 # ==================== BOT COMMANDS ====================
 
@@ -759,12 +760,10 @@ Country: {country} {flag}</pre>"""
                 sender = await event.get_sender()
                 username = sender.username or f"user_{event.sender_id}"
                 await send_hit_notification(card, res, username, event.sender_id)
-        elif res.get("Status") == "Approved":
-            await save_card_to_db(card, "APPROVED", res.get('Response'), res.get('Gateway'), res.get('Price'))
+        # ✅ REMOVED: No database saving for approved cards
     except Exception as e:
         await loading.delete()
         await styled_reply(event, f"{PE} Error: {e}", emoji_ids=[CE["cross"]])
-
 # ==================== MASS SHOPIFY COMMAND (/mtxt) ====================
 @client.on(events.NewMessage(pattern=r'(?i)^[/.]mtxt\b'))
 async def mtxt_cmd(event):
@@ -809,27 +808,12 @@ async def mtxt_cmd(event):
         await styled_reply(event, f"{PE} Limiting to {limit} cards", emoji_ids=[CE["warn"]])
     
     kb = [
-        [pbtn("✅ Yes (Charged+Approved)", f"mtxt_pref:yes:{event.sender_id}")],
-        [pbtn("❌ No (Only Charged)", f"mtxt_pref:no:{event.sender_id}")]
+        [pbtn("✅ Yes (Show Approved)", f"mtxt_pref:yes:{event.sender_id}")],
+        [pbtn("❌ No (Hide Approved)", f"mtxt_pref:no:{event.sender_id}")]
     ]
-    pref_msg = await styled_reply(event, f"{PE} Filter: include Approved? (3 retries on site errors)", kb, emoji_ids=[CE["pin"]])
+    pref_msg = await styled_reply(event, f"{PE} Show approved cards? (3 retries on site errors)", kb, emoji_ids=[CE["pin"]])
     USER_APPROVED_PREF[f"mtxt_{event.sender_id}"] = {"cards": cards, "sites": sites, "event": event, "pref_msg": pref_msg}
 
-@client.on(events.CallbackQuery(pattern=rb"mtxt_pref:(yes|no):(\d+)"))
-async def mtxt_pref_cb(event):
-    match = event.pattern_match
-    pref = match.group(1).decode()
-    uid = int(match.group(2).decode())
-    if event.sender_id != uid:
-        return await event.answer("Not yours", alert=True)
-    data = USER_APPROVED_PREF.pop(f"mtxt_{uid}", None)
-    if not data:
-        return await event.answer("Expired", alert=True)
-    await data["pref_msg"].delete()
-    send_approved = (pref == "yes")
-    ACTIVE_MTXT_PROCESSES[uid] = True
-    await event.answer("Start (3 retries enabled)", alert=False)
-    asyncio.create_task(process_mtxt_cards(data["event"], data["cards"], data["sites"], send_approved))
 
 # ==================== RANDOM SITE MASS CHECK COMMAND (/ran) ====================
 @client.on(events.NewMessage(pattern=r'(?i)^[/.]ran\b'))
@@ -877,47 +861,11 @@ async def ran_cmd(event):
         await styled_reply(event, f"{PE} Limiting to {limit} cards", emoji_ids=[CE["warn"]])
     
     kb = [
-        [pbtn("✅ Yes (Charged+Approved)", f"ran_pref:yes:{event.sender_id}")],
-        [pbtn("❌ No (Only Charged)", f"ran_pref:no:{event.sender_id}")]
+        [pbtn("✅ Yes (Show Approved)", f"ran_pref:yes:{event.sender_id}")],
+        [pbtn("❌ No (Hide Approved)", f"ran_pref:no:{event.sender_id}")]
     ]
-    pref_msg = await styled_reply(event, f"{PE} Filter: include Approved cards? (3 retries on site errors)", kb, emoji_ids=[CE["joker"]])
+    pref_msg = await styled_reply(event, f"{PE} Show approved cards? (3 retries on site errors)", kb, emoji_ids=[CE["joker"]])
     USER_APPROVED_PREF[f"ran_{event.sender_id}"] = {"cards": cards, "sites": global_sites, "event": event, "pref_msg": pref_msg}
-
-@client.on(events.CallbackQuery(pattern=rb"ran_pref:(yes|no):(\d+)"))
-async def ran_pref_cb(event):
-    match = event.pattern_match
-    pref = match.group(1).decode()
-    uid = int(match.group(2).decode())
-    if event.sender_id != uid:
-        return await event.answer("Not your session", alert=True)
-    data = USER_APPROVED_PREF.pop(f"ran_{uid}", None)
-    if not data:
-        return await event.answer("Expired", alert=True)
-    await data["pref_msg"].delete()
-    send_approved = (pref == "yes")
-    ACTIVE_RAN_PROCESSES[uid] = True
-    await event.answer("Starting... (3 retries enabled)", alert=False)
-    asyncio.create_task(process_ran_cards(data["event"], data["cards"], data["sites"], send_approved))
-
-# ==================== STOP CALLBACKS ====================
-@client.on(events.CallbackQuery(pattern=rb"stop_ran:(\d+)"))
-async def stop_ran_cb(event):
-    match = event.pattern_match
-    uid = int(match.group(1).decode())
-    if event.sender_id != uid and event.sender_id not in ADMIN_ID:
-        return await event.answer("Not allowed", alert=True)
-    ACTIVE_RAN_PROCESSES.pop(uid, None)
-    await event.answer("Stopped", alert=True)
-
-@client.on(events.CallbackQuery(pattern=rb"stop_mtxt:(\d+)"))
-async def stop_mtxt_cb(event):
-    match = event.pattern_match
-    uid = int(match.group(1).decode())
-    if event.sender_id != uid and event.sender_id not in ADMIN_ID:
-        return await event.answer("Not allowed", alert=True)
-    ACTIVE_MTXT_PROCESSES.pop(uid, None)
-    await event.answer("Stopped", alert=True)
-
 # ==================== SITE MANAGEMENT COMMANDS ====================
 @client.on(events.NewMessage(pattern=r'(?i)^[/.]add\b'))
 async def add_site_cmd(event):
