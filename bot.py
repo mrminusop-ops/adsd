@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore')
 # ---------- CONFIG ----------
 API_ID = 36442788
 API_HASH = 'a46cfef94ef9de4026597c6a4addf073'
-BOT_TOKEN = '8732799132:AAGUYUUdVMD_d3SAzln0qTnKq0ods7Qv9H4'
+BOT_TOKEN = '8180020111:AAFnyWXzcet_bW3d03Oq-04bHWa5YDCgNY8'
 ADMIN_ID = [6598607558,6456561750]
 GROUP_ID = -1003684602999
 API_BASE_URL = "https://web-production-a8008.up.railway.app/shopify"
