@@ -3,7 +3,6 @@ from telethon import TelegramClient, events, Button
 from telethon.tl.types import MessageEntityCustomEmoji
 from telethon.extensions import html as thtml
 import random, datetime, os, re, asyncio, time, string, aiofiles, aiohttp, json, uuid, warnings, signal, atexit, hashlib, secrets, base64
-from fake_useragent import UserAgent
 from html import unescape
 from contextlib import asynccontextmanager
 
