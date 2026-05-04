@@ -354,6 +354,48 @@ async def check_card_with_retry(card, sites, user_id=None, max_retries=3):
     used_indices = set()
     
     for attempt in range(max_retries):
+        # Get available sites not tried yet
+        available_indices = [i for i in range(len(sites)) if i not in used_indices]
+        
+        if not available_indices:
+            # No more unique sites to try
+            break
+        
+        site_idx = random.choice(available_indices)
+        site = sites[site_idx]
+        used_indices.add(site_idx)
+        
+        try:
+            result = await asyncio.wait_for(
+                check_card_specific_site(card, site, user_id),
+                timeout=TASK_TIMEOUT
+            )
+            
+            # Only retry on site errors
+            if result.get("Status") != "SiteError":
+                return result, site_idx + 1
+                
+        except asyncio.TimeoutError:
+            result = {"Status": "SiteError", "Response": "Timeout", "Gateway": "-", "Price": "-"}
+        except Exception as e:
+            result = {"Status": "SiteError", "Response": str(e), "Gateway": "-", "Price": "-"}
+        
+        # Brief delay before next retry (but not for the last attempt)
+        if attempt < max_retries - 1:
+            await asyncio.sleep(0.5)
+    
+    # All retries failed with site errors
+    return {"Response": "Max retries (3), all sites returned errors", "Price": "-", "Gateway": "-", "Status": "Error"}, -1
+
+async def check_card_with_retry_random(card, sites, user_id=None, max_retries=3):
+    """
+    Check card with up to 3 retries using different random sites each time
+    Returns: (result_dict, site_info_string or site_index)
+    """
+    used_indices = set()
+    
+    for attempt in range(max_retries):
+        # Get available indices not tried yet
         available_indices = [i for i in range(len(sites)) if i not in used_indices]
         
         if not available_indices:
@@ -381,43 +423,19 @@ async def check_card_with_retry(card, sites, user_id=None, max_retries=3):
         if attempt < max_retries - 1:
             await asyncio.sleep(0.5)
     
-    return {"Response": "Max retries (3), all sites returned errors", "Price": "-", "Gateway": "-", "Status": "Error"}, -1
-
-async def check_card_with_retry_random(card, sites, user_id=None, max_retries=3):
-    """
-    Check card with up to 3 retries using different random sites each time
-    Returns: (result_dict, site_info_string or site_index)
-    """
-    used_indices = set()
-    
-    for attempt in range(max_retries):
-        available_indices = [i for i in range(len(sites)) if i not in used_indices]
-        
-        if not available_indices:
-            break
-        
-        site_idx = random.choice(available_indices)
-        site = sites[site_idx]
-        used_indices.add(site_idx)
-        
-        try:
-            result = await asyncio.wait_for(
-                check_card_specific_site(card, site, user_id),
-                timeout=TASK_TIMEOUT
-            )
-            
-            if result.get("Status") != "SiteError":
-                return result, site_idx + 1
-                
-        except asyncio.TimeoutError:
-            result = {"Status": "SiteError", "Response": "Timeout", "Gateway": "-", "Price": "-"}
-        except Exception as e:
-            result = {"Status": "SiteError", "Response": str(e), "Gateway": "-", "Price": "-"}
-        
-        if attempt < max_retries - 1:
-            await asyncio.sleep(0.5)
-    
     return {"Response": "Max retries (3), all random sites returned errors", "Price": "-", "Gateway": "-", "Status": "Error"}, -1
+
+async def cancellable_check(card, site, user_id, timeout=TASK_TIMEOUT):
+    """Wrapper that makes any card check cancellable with timeout"""
+    try:
+        return await asyncio.wait_for(
+            check_card_specific_site(card, site, user_id),
+            timeout=timeout
+        )
+    except asyncio.TimeoutError:
+        return {"Status": "Declined", "Response": f"Timeout", "Gateway": "-", "Price": "-"}
+    except Exception as e:
+        return {"Status": "Declined", "Response": str(e), "Gateway": "-", "Price": "-"}
 
 async def test_single_site(site, test_card="4031630422575208|01|2030|280", user_id=None):
     proxy_data = await get_working_proxy(user_id) if user_id else None
