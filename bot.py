@@ -166,7 +166,7 @@ async def get_working_proxy(user_id, max_attempts=5):
 
 # ---------- Helper Functions ----------
 def get_cc_limit(plan: str, user_id=None):
-    limits = {"free": 300, "pro": 2000, "toji": 5000}
+    limits = {"free": 1, "pro": 5000, "toji": 10000}
     return limits.get(plan.lower(), 300)
 
 def extract_card(text):
